@@ -12,6 +12,13 @@ from typing import Any, Mapping, Sequence
 
 from garminconnect import workout as gw
 
+# Garmin's own workoutTargetTypeId values. garminconnect's TargetType has never
+# had a pace entry and has renumbered the rest between releases, so these are
+# pinned here rather than borrowed from it.
+TARGET_NONE = 1
+TARGET_HEART_RATE_ZONE = 4
+TARGET_PACE_ZONE = 6
+
 # Sport name -> (workout model, default pace seconds per km used for estimates)
 SPORTS: dict[str, tuple[type, float]] = {
     "running": (gw.RunningWorkout, 300.0),
@@ -89,7 +96,7 @@ def _pace_target(pace: Any) -> tuple[dict[str, Any], tuple[float, float], str]:
 
     speeds = sorted(1000.0 / b for b in bounds)
     target = {
-        "workoutTargetTypeId": gw.TargetType.PACE_ZONE,
+        "workoutTargetTypeId": TARGET_PACE_ZONE,
         "workoutTargetTypeKey": "pace.zone",
         "displayOrder": 6,
     }
@@ -104,7 +111,7 @@ def _hr_target(hr: Any) -> tuple[dict[str, Any], tuple[float, float], str]:
     if not 60 <= low <= 230 or not 60 <= high <= 230:
         raise WorkoutError(f"Heart-rate target {hr!r} is outside 60-230 bpm.")
     target = {
-        "workoutTargetTypeId": gw.TargetType.HEART_RATE_ZONE,
+        "workoutTargetTypeId": TARGET_HEART_RATE_ZONE,
         "workoutTargetTypeKey": "heart.rate.zone",
         "displayOrder": 4,
     }
@@ -112,7 +119,7 @@ def _hr_target(hr: Any) -> tuple[dict[str, Any], tuple[float, float], str]:
 
 
 NO_TARGET = {
-    "workoutTargetTypeId": gw.TargetType.NO_TARGET,
+    "workoutTargetTypeId": TARGET_NONE,
     "workoutTargetTypeKey": "no.target",
     "displayOrder": 1,
 }
