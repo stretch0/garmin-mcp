@@ -1,0 +1,4 @@
+*
+!requirements.txt
+!garmin_mcp/
+garmin_mcp/__pycache__/

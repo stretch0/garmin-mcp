@@ -1,4 +1,4 @@
-"""MCP server exposing read-only Garmin Connect data over stdio.
+"""MCP server exposing Garmin Connect data over stdio, or over HTTP when asked.
 
 Every tool is read-only: nothing here writes to Garmin, and nothing returns the
 password or the cached token.
@@ -12,11 +12,18 @@ from typing import Any, Callable, Mapping
 
 import anyio
 
+try:
+    from mcp.server.auth.middleware.auth_context import get_access_token
+except ImportError:  # an mcp too old for HTTP auth, which stdio doesn't need
+    def get_access_token():
+        return None
+
 try:  # mcp >= 2.0
     from mcp.server.mcpserver import MCPServer
 except ImportError:  # mcp 1.x called the same thing FastMCP
     from mcp.server.fastmcp import FastMCP as MCPServer
 
+from . import remote
 from .formatting import (
     DateError,
     drop_empty,
@@ -36,6 +43,8 @@ from .workouts import SPORTS, WorkoutError, build_workout
 
 log = logging.getLogger(__name__)
 
+_server_options, _oauth_provider = remote.server_options()
+
 mcp = MCPServer(
     "garmin",
     instructions=(
@@ -44,6 +53,7 @@ mcp = MCPServer(
         "'today', 'yesterday', or a negative day offset such as '-7'. If a tool "
         "returns an 'error' key, show it to the user rather than retrying blindly."
     ),
+    **_server_options,
 )
 
 MAX_ACTIVITIES = 50
@@ -63,6 +73,9 @@ def tool_errors(fn):
 
     @functools.wraps(fn)
     async def wrapper(*args, **kwargs):
+        caller = get_access_token()
+        if caller is not None:  # only over HTTP; stdio has no token
+            log.info("%s called by %s", fn.__name__, caller.subject)
         try:
             return await fn(*args, **kwargs)
         except (GarminError, DateError, WorkoutError) as exc:
@@ -726,7 +739,10 @@ def main() -> None:
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(name)s: %(message)s",
     )
-    mcp.run(transport="stdio")
+    if remote.transport() == "http":
+        remote.run(mcp, _oauth_provider)
+    else:
+        mcp.run(transport="stdio")
 
 
 if __name__ == "__main__":

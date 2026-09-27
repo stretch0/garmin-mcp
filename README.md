@@ -167,11 +167,25 @@ Garmin account — no network, no credentials. Covers every tool's response shap
 workout construction, bad input, and the no-credentials startup path.
 
 ```bash
+.venv/bin/python tests/http_test.py
+```
+
+The same for the HTTP transport, as Claude drives it: discovery, client
+registration, Google sign-in (stubbed), consent, token exchange and rotation,
+and tool calls with the token.
+
+```bash
 .venv/bin/python -m garmin_mcp.check
 ```
 
 The same code path against your real account, printing what comes back. Useful
 for confirming a setup end to end.
+
+## Running it as a service
+
+To use it from every Claude client on your account (web and mobile included),
+run it on a machine at home as a Docker container. It then serves MCP over
+HTTP behind Google sign-in. [SELF-HOSTING.md](SELF-HOSTING.md) has the setup.
 
 ## Other MCP clients, and ChatGPT
 
